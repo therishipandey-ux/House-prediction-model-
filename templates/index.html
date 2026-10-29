@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gharmol: Mumbai home price and rent estimator</title>
+<meta name="description" content="Estimate the sale price and monthly rent of a flat in Mumbai, Thane and Navi Mumbai from {{ '{:,}'.format(metrics.rows) }} real listings.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230C2A33'/%3E%3Cpath d='M16 6 6 15h3v10h14V15h3z' fill='%23F5B614'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- ================= HERO ================= -->
+<header class="hero">
+  <div class="hero-inner">
+    <a class="brand" href="/" aria-label="Gharmol home">
+      <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#F5B614"/><path d="M16 6 6 15h3v10h14V15h3z" fill="#0C2A33"/></svg>
+      <span>Gharmol</span>
+    </a>
+
+    <h1>What is a flat in Mumbai worth today?</h1>
+    <p class="lede">Pick a locality, set the size, and watch the price and rent move.
+      Built on {{ '{:,}'.format(metrics.rows) }} real listings across {{ n_locations }} localities, from Colaba to Karjat.</p>
+
+    <div class="quick" role="group" aria-label="Popular localities">
+      <span class="quick-label">Try</span>
+      <div id="quick"></div>
+    </div>
+  </div>
+
+  <!-- Evening skyline: towers, lit windows, and the Sea Link -->
+  <svg class="skyline" viewBox="0 0 1440 220" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
+    <defs>
+      <pattern id="win" width="10" height="14" patternUnits="userSpaceOnUse">
+        <rect x="2" y="3" width="4" height="6" fill="#F5B614" opacity=".55"/>
+      </pattern>
+      <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#14414E"/><stop offset="1" stop-color="#0C2A33"/>
+      </linearGradient>
+    </defs>
+    <circle cx="1180" cy="120" r="64" fill="#F5B614" opacity=".92"/>
+    <circle cx="1180" cy="120" r="96" fill="#F5B614" opacity=".12"/>
+    <!-- far towers -->
+    <g fill="#16424F">
+      <rect x="20" y="110" width="46" height="110"/><rect x="92" y="80" width="38" height="140"/>
+      <rect x="160" y="120" width="52" height="100"/><rect x="250" y="60" width="34" height="160"/>
+      <rect x="310" y="100" width="58" height="120"/><rect x="400" y="130" width="44" height="90"/>
+      <rect x="470" y="70" width="40" height="150"/><rect x="540" y="105" width="54" height="115"/>
+      <rect x="630" y="88" width="36" height="132"/><rect x="700" y="125" width="60" height="95"/>
+      <rect x="790" y="96" width="42" height="124"/>
+    </g>
+    <!-- near towers with lit windows -->
+    <g>
+      <g fill="#0F3340">
+        <rect x="0" y="140" width="64" height="80"/><rect x="74" y="104" width="50" height="116"/>
+        <rect x="140" y="150" width="70" height="70"/><rect x="226" y="92" width="44" height="128"/>
+        <rect x="292" y="134" width="62" height="86"/><rect x="372" y="112" width="48" height="108"/>
+        <rect x="438" y="152" width="66" height="68"/><rect x="522" y="98" width="46" height="122"/>
+        <rect x="586" y="138" width="58" height="82"/><rect x="662" y="118" width="44" height="102"/>
+        <rect x="724" y="150" width="70" height="70"/><rect x="812" y="126" width="50" height="94"/>
+      </g>
+      <g fill="url(#win)">
+        <rect x="74" y="104" width="50" height="116"/><rect x="226" y="92" width="44" height="128"/>
+        <rect x="372" y="112" width="48" height="108"/><rect x="522" y="98" width="46" height="122"/>
+        <rect x="662" y="118" width="44" height="102"/><rect x="292" y="134" width="62" height="86"/>
+        <rect x="812" y="126" width="50" height="94"/>
+      </g>
+    </g>
+    <!-- water + Sea Link -->
+    <rect x="870" y="176" width="570" height="44" fill="url(#sea)"/>
+    <g stroke="#2F7280" stroke-width="1.4" fill="none">
+      <path d="M900 176H1440" stroke-width="3"/>
+      <path d="M1040 176 1056 70 1072 176"/><path d="M1056 70 1000 176M1056 70 1112 176M1056 70 1150 176M1056 70 1190 176M1056 70 1230 176"/>
+      <path d="M1056 70 1010 176M1056 70 960 176"/>
+      <path d="M1320 176 1336 100 1352 176"/><path d="M1336 100 1280 176M1336 100 1392 176M1336 100 1430 176M1336 100 1240 176"/>
+    </g>
+  </svg>
+</header>
+
+<!-- ================= TOOL ================= -->
+<main class="layout">
+
+  <!-- ---------- inputs ---------- -->
+  <form class="panel form" id="form" autocomplete="off" novalidate>
+    <h2 class="panel-title">Describe the flat</h2>
+
+    <div class="field">
+      <label for="location">Locality</label>
+      <div class="combo" id="combo">
+        <input type="text" id="location" role="combobox" aria-expanded="false"
+               aria-controls="location-list" aria-autocomplete="list"
+               placeholder="Search {{ n_locations }} localities" spellcheck="false">
+        <ul id="location-list" role="listbox" hidden></ul>
+      </div>
+      <p class="hint" id="location-hint"></p>
+    </div>
+
+    <div class="field">
+      <div class="label-row">
+        <label for="sqft">Carpet area</label>
+        <span class="num-input"><input type="number" id="sqft" min="200" max="8000" step="10" inputmode="numeric" aria-label="Area in square feet"><span>sq ft</span></span>
+      </div>
+      <input type="range" id="sqft-range" min="200" max="4000" step="10" aria-label="Area slider">
+      <div class="range-ends"><span>200</span><span>4,000+</span></div>
+    </div>
+
+    <div class="field">
+      <span class="label" id="bhk-label">Bedrooms</span>
+      <div class="pills" id="bhk" role="radiogroup" aria-labelledby="bhk-label"></div>
+    </div>
+
+    <div class="field">
+      <span class="label" id="type-label">Property</span>
+      <div class="segment" id="type" role="radiogroup" aria-labelledby="type-label">
+        <button type="button" role="radio" data-v="0" aria-checked="true">New</button>
+        <button type="button" role="radio" data-v="1" aria-checked="false">Resale</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="label-row">
+        <span class="label" id="amen-label">Building amenities</span>
+        <span class="count"><b id="amen-count">0</b> of <span id="amen-total"></span></span>
+      </div>
+      <div class="presets">
+        <button type="button" data-preset="essentials">Essentials</button>
+        <button type="button" data-preset="all">Everything</button>
+        <button type="button" data-preset="none">Clear</button>
+      </div>
+      <div class="chips" id="amenities" role="group" aria-labelledby="amen-label"></div>
+    </div>
+
+    <p class="form-error" id="form-error" role="alert" hidden></p>
+  </form>
+
+  <!-- ---------- results ---------- -->
+  <section class="sheet" id="results" aria-live="polite" aria-label="Estimate">
+
+    <div class="verdict" id="verdict">
+      <div class="verdict-top">
+        <p class="v-where" id="v-where">&nbsp;</p>
+        <p class="v-conf" id="v-conf"></p>
+      </div>
+
+      <div class="verdict-grid">
+        <div>
+          <p class="v-label">Estimated sale price</p>
+          <p class="v-price" id="price">&ndash;</p>
+          <p class="v-sub" id="price-range"></p>
+        </div>
+        <div>
+          <p class="v-label">Estimated rent</p>
+          <p class="v-rent"><span id="rent">&ndash;</span><small>a month</small></p>
+          <p class="v-sub" id="rent-range"></p>
+        </div>
+      </div>
+
+      <div class="rangebar" aria-hidden="true">
+        <div class="rb-track"><div class="rb-dot" id="rb-dot"></div></div>
+        <div class="rb-ends"><span id="rb-low"></span><span id="rb-high"></span></div>
+      </div>
+
+      <button type="button" class="pin" id="pin">Pin to compare</button>
+    </div>
+
+    <div class="body">
+      <div class="duo">
+        <section class="block">
+          <h3>Against the neighbourhood</h3>
+          <div class="gauge" id="gauge"></div>
+          <p class="block-note" id="gauge-note"></p>
+        </section>
+        <section class="block">
+          <h3>What amenities add</h3>
+          <div class="amen-bars" id="amen-bars"></div>
+          <p class="block-note" id="amen-note"></p>
+        </section>
+      </div>
+
+      <section class="block">
+        <h3>Price by size</h3>
+        <p class="block-note">Same locality, same BHK, different sizes. Click or tap the chart to try a size.</p>
+        <div class="chart" id="chart"></div>
+      </section>
+
+      <section class="block">
+        <h3>Price per sq ft across the region</h3>
+        <p class="block-note">The busiest localities, typical price per sq ft. Select one to price the same flat there.</p>
+        <div class="ladder" id="ladder"></div>
+      </section>
+
+      <section class="block">
+        <h3>Buy or rent</h3>
+        <div class="emi">
+          <div class="emi-controls">
+            <label class="slider"><span>Down payment <b id="down-out">20%</b></span>
+              <input type="range" id="down" min="10" max="60" step="5" value="20"></label>
+            <label class="slider"><span>Interest rate <b id="rate-out">8.5%</b></span>
+              <input type="range" id="rate" min="6" max="12" step="0.1" value="8.5"></label>
+            <label class="slider"><span>Loan term <b id="years-out">20 years</b></span>
+              <input type="range" id="years" min="5" max="30" step="1" value="20"></label>
+          </div>
+          <div class="emi-out" id="emi-out"></div>
+        </div>
+      </section>
+
+      <section class="block" id="compare" hidden>
+        <h3>Pinned estimates</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">Flat</th><th scope="col">Price</th><th scope="col">Rent a month</th><th scope="col">Per sq ft</th><th scope="col"><span class="sr">Remove</span></th></tr></thead>
+            <tbody id="compare-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <p class="fine">
+        Rent is calculated as {{ (bootstrap.rentYield * 100)|round(1) }}% of the sale price per year, because the data holds sale prices only.
+        The model (Random Forest, R&sup2; {{ '%.2f'|format(metrics.r2) }}) is typically within {{ metrics.typical_error|round(0)|int }}% on unseen listings.
+        Localities with few listings carry more uncertainty. Estimates are for learning and planning, not for financial decisions.
+      </p>
+    </div>
+  </section>
+</main>
+
+<!-- mobile dock: keeps the live number in view while you edit -->
+<a class="dock" id="dock" href="#results">
+  <span><small>Sale price</small><b id="dock-price">&ndash;</b></span>
+  <span><small>Rent a month</small><b id="dock-rent">&ndash;</b></span>
+  <span class="dock-go">Details</span>
+</a>
+
+<script id="boot" type="application/json">{{ bootstrap|tojson }}</script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
